@@ -1,0 +1,121 @@
+## CONSTANTS
+@BASE_URL=http://localhost:8080/api/v1
+
+### GET ALL USERS
+GET {{BASE_URL}}/users
+Content-Type: application/json
+
+### GET SINGLE USER
+GET {{BASE_URL}}/users/1
+Content-Type: application/json
+
+### CREATE USER
+POST {{BASE_URL}}/users
+Content-Type: application/json
+
+{
+  "email": "mesut@example.com",
+  "first_name": "Mesut",
+  "last_name": "Empire"
+}
+
+### UPDATE USER
+PUT {{BASE_URL}}/users/1
+Content-Type: application/json
+
+{
+  "email": "mesut_updated@example.com",
+  "first_name": "MesutUpdated",
+  "last_name": "EmpireUpdated"
+}
+
+### DELETE USER
+DELETE {{BASE_URL}}/users/1
+Content-Type: application/json
+
+### GET ALL CLAIMS
+GET {{BASE_URL}}/claims
+Content-Type: application/json
+
+### GET SINGLE CLAIM
+GET {{BASE_URL}}/claims/1
+Content-Type: application/json
+
+### GET CLAIMS BY USER ID
+GET {{BASE_URL}}/users/1/claims
+Content-Type: application/json
+
+### CREATE CLAIM
+POST {{BASE_URL}}/claims
+Content-Type: application/json
+
+{
+  "userId": 1,
+  "location": "Nairobi, Kenya",
+  "latitude": -1.2921,
+  "longitude": 36.8219,
+  "status": "PENDING",
+  "hash": "abc123hash",
+  "severity": "MEDIUM",
+  "description": "Possible flood detected near the river.",
+  "detectionType": "AUTOMATIC"
+}
+
+### UPDATE CLAIM
+PUT {{BASE_URL}}/claims/1
+Content-Type: application/json
+
+{
+  "location": "Nairobi CBD",
+  "latitude": -1.2833,
+  "longitude": 36.8167,
+  "status": "VERIFIED",
+  "hash": "updatedhash",
+  "severity": "HIGH",
+  "description": "Flood confirmed in the CBD area.",
+  "detectionType": "MANUAL"
+}
+
+### DELETE CLAIM
+DELETE {{BASE_URL}}/claims/1
+Content-Type: application/json
+
+
+## IMAGES
+
+### GET ALL IMAGES
+GET {{BASE_URL}}/images
+Content-Type: application/json
+
+### GET SINGLE IMAGE
+GET {{BASE_URL}}/images/1
+Content-Type: application/json
+
+### GET IMAGES BY CLAIM ID
+GET {{BASE_URL}}/claims/1/images
+Content-Type: application/json
+
+### CREATE IMAGE
+POST {{BASE_URL}}/images
+Content-Type: application/json
+
+{
+  "claim_id": 1,
+  "url": "https://example.com/image1.jpg",
+  "hash": "imagehash123",
+  "timestamp": "2025-10-07T10:00:00"
+}
+
+### UPDATE IMAGE
+PUT {{BASE_URL}}/images/1
+Content-Type: application/json
+
+{
+  "url": "https://example.com/image_updated.jpg",
+  "hash": "updatedimagehash123",
+  "timestamp": "2025-10-07T12:00:00"
+}
+
+### DELETE IMAGE
+DELETE {{BASE_URL}}/images/1
+Content-Type: application/json
