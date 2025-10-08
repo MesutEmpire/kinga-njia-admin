@@ -1,12 +1,17 @@
 package com.kinganjia.backend.model;
 
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
 @Table(name = "users")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     List<Claim> claims;
@@ -22,6 +27,9 @@ public class User {
 
     @Column(nullable = false)
     private String last_name;
+
+    @Column(nullable = false)
+    private String password;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
