@@ -1,19 +1,23 @@
 package com.kinganjia.backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "images")
-@Data
+@Table(name = "images" ,indexes = {
+        @Index(name = "idx_claim_id",columnList = "claim_id"),
+        @Index(name="idx_hash",columnList = "hash"),
+        @Index(name="idx_created_at",columnList = "created_at")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"claim"})
+@EqualsAndHashCode(exclude = {"claim"})
 public class Image {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,8 +31,8 @@ public class Image {
 
     private LocalDateTime timestamp;
 
-    @ManyToOne
-    @JoinColumn(name = "claim_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "claim_id",nullable = false)
     private Claim claim;
 
     @Column(name = "created_at")

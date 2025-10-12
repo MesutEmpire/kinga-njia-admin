@@ -1,30 +1,39 @@
 package com.kinganjia.backend.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "claims")
-@Data
+@Table(name = "claims",indexes = {
+    @Index(name = "idx_user_id", columnList = "user_id"),
+    @Index(name = "idx_status", columnList = "status"),
+    @Index(name = "idx_created_at", columnList = "created_at"),
+    @Index(name = "idx_hash", columnList = "hash")
+})
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"user","images"})
+@EqualsAndHashCode(exclude = {"user","images"})
 public class Claim {
-    @OneToMany(mappedBy = "claim", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "claim", cascade = {
+            CascadeType.PERSIST,
+            CascadeType.MERGE
+    },
+            orphanRemoval = false)
     List<Image> images;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false)
