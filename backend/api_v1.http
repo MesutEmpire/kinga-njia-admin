@@ -14,19 +14,20 @@ POST {{BASE_URL}}/users
 Content-Type: application/json
 
 {
-  "email": "mesut@example.com",
-  "first_name": "Mesut",
-  "last_name": "Empire"
+  "email": "mark@example.com",
+  "firstName": "Mark",
+  "lastName": "Peter",
+  "password": "987654321"
 }
 
 ### UPDATE USER
-PUT {{BASE_URL}}/users/1
+PUT {{BASE_URL}}/users/2
 Content-Type: application/json
 
 {
-  "email": "mesut_updated@example.com",
-  "first_name": "MesutUpdated",
-  "last_name": "EmpireUpdated"
+  "email": "mesut_updated2@example.com",
+  "firstName": "MesutUpdated2",
+  "lastName": "EmpireUpdated2"
 }
 
 ### DELETE USER
