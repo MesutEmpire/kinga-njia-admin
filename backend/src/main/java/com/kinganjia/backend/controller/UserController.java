@@ -1,8 +1,10 @@
 package com.kinganjia.backend.controller;
 
+import com.kinganjia.backend.dto.ClaimResponseDTO;
 import com.kinganjia.backend.dto.UserRequestDTO;
 import com.kinganjia.backend.dto.UserResponseDTO;
 import com.kinganjia.backend.dto.response.ApiResponse;
+import com.kinganjia.backend.service.ClaimService;
 import com.kinganjia.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -17,9 +19,11 @@ import java.util.List;
 @Slf4j
 public class UserController {
     private final UserService userService;
+    private final ClaimService claimService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, ClaimService claimService) {
         this.userService = userService;
+        this.claimService = claimService;
     }
 
     @GetMapping
@@ -30,6 +34,11 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserResponseDTO>> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Users retrieved successfully", userService.getUserById(id)));
+    }
+
+    @GetMapping("/{id}/claims")
+    public ResponseEntity<ApiResponse<List<ClaimResponseDTO>>> getUserClaims(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("User claims retrieved successfully", claimService.getClaimByUserIdl(id)));
     }
 
     @PostMapping
