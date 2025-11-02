@@ -1,0 +1,10 @@
+services:
+  backend:
+    build:
+      context: backend
+      dockerfile: Dockerfile
+    container_name: kinga_njiani
+    ports:
+      - 8080:8080
+    env_file:
+      - backend/.env
