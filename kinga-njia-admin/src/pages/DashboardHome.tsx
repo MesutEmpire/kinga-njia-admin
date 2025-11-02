@@ -1,6 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, CheckCircle, Clock, XCircle, TrendingUp, MapPin } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, MapPin, Loader, TrendingUp } from 'lucide-react';
+import { useClaims } from '../hooks/useClaims';
+import { ClaimStatus } from '../types/api';
+import { format } from 'date-fns';
 
 const StatCard: React.FC<{
   title: string;
@@ -27,15 +30,16 @@ const StatCard: React.FC<{
 );
 
 const RecentClaim: React.FC<{
-  id: string;
-  status: 'pending' | 'verified' | 'rejected';
+  id: number;
+  status: ClaimStatus;
   location: string;
   time: string;
 }> = ({ id, status, location, time }) => {
   const statusConfig = {
-    pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending' },
-    verified: { color: 'bg-green-100 text-green-800', text: 'Verified' },
-    rejected: { color: 'bg-red-100 text-red-800', text: 'Rejected' }
+    PENDING: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending' },
+    VERIFIED: { color: 'bg-green-100 text-green-800', text: 'Verified' },
+    REJECTED: { color: 'bg-red-100 text-red-800', text: 'Rejected' },
+    RESOLVED: { color: 'bg-blue-100 text-blue-800', text: 'Resolved' }
   };
 
   return (
@@ -63,10 +67,18 @@ const RecentClaim: React.FC<{
 };
 
 const DashboardHome: React.FC = () => {
+  const { data: claims = [], isLoading, error } = useClaims();
+
+  // Calculate stats from real data
+  const totalClaims = claims.length;
+  const verifiedClaims = claims.filter(c => c.status === ClaimStatus.VERIFIED).length;
+  const pendingClaims = claims.filter(c => c.status === ClaimStatus.PENDING).length;
+  const rejectedClaims = claims.filter(c => c.status === ClaimStatus.REJECTED).length;
+
   const stats = [
     {
       title: 'Total Claims',
-      value: '1,247',
+      value: totalClaims.toString(),
       change: '+12%',
       changeType: 'increase' as const,
       icon: <FileText className="w-6 h-6 text-blue-600" />,
@@ -74,7 +86,7 @@ const DashboardHome: React.FC = () => {
     },
     {
       title: 'Verified Claims',
-      value: '892',
+      value: verifiedClaims.toString(),
       change: '+8%',
       changeType: 'increase' as const,
       icon: <CheckCircle className="w-6 h-6 text-green-600" />,
@@ -82,7 +94,7 @@ const DashboardHome: React.FC = () => {
     },
     {
       title: 'Pending Claims',
-      value: '284',
+      value: pendingClaims.toString(),
       change: '+5%',
       changeType: 'increase' as const,
       icon: <Clock className="w-6 h-6 text-yellow-600" />,
@@ -90,7 +102,7 @@ const DashboardHome: React.FC = () => {
     },
     {
       title: 'Rejected Claims',
-      value: '71',
+      value: rejectedClaims.toString(),
       change: '-3%',
       changeType: 'decrease' as const,
       icon: <XCircle className="w-6 h-6 text-red-600" />,
@@ -98,13 +110,32 @@ const DashboardHome: React.FC = () => {
     }
   ];
 
-  const recentClaims = [
-    { id: '2024-001', status: 'pending' as const, location: 'Downtown Lagos', time: '2 min ago' },
-    { id: '2024-002', status: 'verified' as const, location: 'Victoria Island', time: '15 min ago' },
-    { id: '2024-003', status: 'pending' as const, location: 'Ikeja GRA', time: '1 hour ago' },
-    { id: '2024-004', status: 'rejected' as const, location: 'Lekki Phase 1', time: '2 hours ago' },
-    { id: '2024-005', status: 'verified' as const, location: 'Surulere', time: '3 hours ago' }
-  ];
+  // Get recent claims (last 5)
+  const recentClaims = claims
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+    .map(claim => ({
+      id: claim.id,
+      status: claim.status,
+      location: claim.location,
+      time: format(new Date(claim.createdAt), 'MMM dd, HH:mm')
+    }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-800">Error loading dashboard data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -116,7 +147,7 @@ const DashboardHome: React.FC = () => {
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-500">
           <span>Last updated:</span>
-          <span className="font-medium">2 minutes ago</span>
+          <span className="font-medium">{format(new Date(), 'MMM dd, HH:mm')}</span>
         </div>
       </div>
 
@@ -129,14 +160,14 @@ const DashboardHome: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Recent Claims */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Claims</h3>
-                <Link 
+                <Link
                   to="/claims"
                   className="text-blue-600 text-sm font-medium hover:text-blue-700 transition-colors"
                 >
@@ -154,7 +185,7 @@ const DashboardHome: React.FC = () => {
 
         {/* Quick Stats */}
         <div className="space-y-6">
-          
+
           {/* Claims Today */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">

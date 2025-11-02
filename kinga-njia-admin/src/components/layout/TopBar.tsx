@@ -29,7 +29,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
           >
             <Menu className="w-6 h-6" />
           </button>
-          
+
           <div className="ml-4 lg:ml-0">
             <h1 className="text-xl font-semibold text-gray-900">
               Claims Dashboard
@@ -54,11 +54,11 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
             >
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-white">
-                  {user?.name.charAt(0).toUpperCase()}
+                  {user?.firstName?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
                 <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
               </div>
             </button>
@@ -69,7 +69,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
                   <User className="w-4 h-4 mr-3" />
                   Profile
                 </button>
-                <button 
+                <button
                   onClick={logout}
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                 >

@@ -1,11 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  Home, 
-  FileText, 
-  BarChart3, 
-  Users, 
-  Settings, 
+import {
+  Home,
+  FileText,
+  BarChart3,
+  Users,
+  Settings,
   Shield,
   X
 } from 'lucide-react';
@@ -28,27 +28,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   ];
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-      isActive
-        ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
-        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+    `flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
+      ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
+      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
     }`;
 
   return (
     <>
       {/* Mobile backdrop */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:flex lg:flex-col`}>
-        
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:flex lg:flex-col`}>
+
         {/* Logo and close button */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center">
@@ -88,11 +86,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           <div className="flex items-center">
             <div className="flex-shrink-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-white">
-                {user?.name.charAt(0).toUpperCase()}
+                {user?.firstName?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+              <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
             </div>
           </div>

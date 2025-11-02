@@ -1,17 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  role: 'admin' | 'staff';
-  name: string;
-}
+import { authService } from '../api/services/auth';
+import { User } from '../types/api';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,42 +24,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in (from localStorage)
-    const storedUser = localStorage.getItem('njiani_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const currentUser = await authService.getCurrentUser();
+          setUser(currentUser);
+        } catch (error) {
+          console.error('Failed to fetch current user:', error);
+          localStorage.removeItem('token');
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock authentication - in production, this would connect to Supabase
-    if (email === 'admin@njiani.com' && password === 'admin123') {
-      const adminUser: User = {
-        id: '1',
-        email: 'admin@njiani.com',
-        role: 'admin',
-        name: 'Admin User'
-      };
-      setUser(adminUser);
-      localStorage.setItem('njiani_user', JSON.stringify(adminUser));
-    } else if (email === 'staff@njiani.com' && password === 'staff123') {
-      const staffUser: User = {
-        id: '2',
-        email: 'staff@njiani.com',
-        role: 'staff',
-        name: 'Staff User'
-      };
-      setUser(staffUser);
-      localStorage.setItem('njiani_user', JSON.stringify(staffUser));
-    } else {
-      throw new Error('Invalid credentials');
-    }
+    const response = await authService.login({ email, password });
+    localStorage.setItem('token', response.token);
+    // Fetch fresh user data to get complete User object with timestamps
+    const currentUser = await authService.getCurrentUser();
+    setUser(currentUser);
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('njiani_user');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+    }
   };
 
   const value = {
