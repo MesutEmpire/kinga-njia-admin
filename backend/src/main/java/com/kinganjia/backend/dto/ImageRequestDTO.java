@@ -10,5 +10,5 @@ public class ImageRequestDTO {
     private String url;
     private String hash;
     private LocalDateTime timestamp;
-    private Claim claim;
+    private Long claimId;
 }
