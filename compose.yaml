@@ -1,10 +1,65 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kinganjia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kinganjia
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - kinganjia-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: backend
       dockerfile: Dockerfile
-    container_name: kinga_njiani
+    container_name: kinganjia-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - 8080:8080
+      - "8080:8080"
     env_file:
-      - backend/.env
+      - backend/.env  
+    networks:
+      - kinganjia-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: kinganjia-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kinganjia.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    networks:
+      - kinganjia-network
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+
+
+networks:
+  kinganjia-network:
+    driver: bridge
