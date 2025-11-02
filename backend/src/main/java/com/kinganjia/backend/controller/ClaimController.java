@@ -2,8 +2,10 @@ package com.kinganjia.backend.controller;
 
 import com.kinganjia.backend.dto.ClaimRequestDTO;
 import com.kinganjia.backend.dto.ClaimResponseDTO;
+import com.kinganjia.backend.dto.ImageResponseDTO;
 import com.kinganjia.backend.dto.response.ApiResponse;
 import com.kinganjia.backend.service.ClaimService;
+import com.kinganjia.backend.service.ImageService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -17,9 +19,11 @@ import java.util.List;
 @Slf4j
 public class ClaimController {
     private final ClaimService claimService;
+    private final ImageService imageService;
 
-    public ClaimController(ClaimService claimService) {
+    public ClaimController(ClaimService claimService, ImageService imageService) {
         this.claimService = claimService;
+        this.imageService = imageService;
     }
 
     @GetMapping
@@ -30,6 +34,11 @@ public class ClaimController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ClaimResponseDTO>> getClaimById(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Claims retrieved successfully", claimService.getClaimById(id)));
+    }
+
+    @GetMapping("/{id}/images")
+    public ResponseEntity<ApiResponse<List<ImageResponseDTO>>> getClaimImages(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok("Claim images retrieved successfully", imageService.getClaimByClaimId(id)));
     }
 
     @PostMapping
