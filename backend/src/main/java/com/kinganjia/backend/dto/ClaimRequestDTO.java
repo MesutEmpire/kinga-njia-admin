@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class ClaimRequestDTO {
-    private User user;
+    private Long userId;
     private String location;
     private Double latitude;
     private Double longitude;

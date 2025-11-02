@@ -22,5 +22,5 @@ public class ClaimResponseDTO {
     private LocalDateTime confirmationTime;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    List<Image> images;
+    private List<Image> images;
 }
