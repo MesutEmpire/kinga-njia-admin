@@ -19,11 +19,13 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
 
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
+
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Claims', href: '/claims', icon: FileText },
     { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-    ...(user?.role === 'admin' ? [{ name: 'Staff', href: '/staff', icon: Users }] : []),
+    ...(isAdmin ? [{ name: 'Staff', href: '/staff', icon: Users }] : []),
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

@@ -6,6 +6,8 @@ export const useUsers = () => {
     return useQuery({
         queryKey: ['users'],
         queryFn: userService.getAll,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        refetchOnWindowFocus: false,
     });
 };
 
@@ -14,6 +16,7 @@ export const useUser = (id: number) => {
         queryKey: ['users', id],
         queryFn: () => userService.getById(id),
         enabled: !!id,
+        staleTime: 2 * 60 * 1000, // 2 minutes
     });
 };
 

@@ -9,9 +9,11 @@ import {
   Calendar,
   Hash,
   Image as ImageIcon,
-  Loader
+  Loader,
+  AlertCircle
 } from 'lucide-react';
 import { useClaims } from '../hooks/useClaims';
+import { useAlertDialog } from '../components/ui/AlertDialog';
 import { Claim, ClaimStatus, SeverityLevel } from '../types/api';
 import { format } from 'date-fns';
 
@@ -21,8 +23,10 @@ const ClaimsPage: React.FC = () => {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const { data: claims = [], isLoading, error } = useClaims();
+  const { showAlert } = useAlertDialog();
   const itemsPerPage = 10;
 
   const filteredClaims = claims.filter((claim: Claim) => {
@@ -41,6 +45,59 @@ const ClaimsPage: React.FC = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  // Export function - calls backend endpoint
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+      const response = await fetch(`${apiBaseUrl}/claims/export/csv`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download CSV');
+      }
+
+      // Get the filename from Content-Disposition header
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'claims-export.csv';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export error:', err);
+      showAlert({
+        title: 'Export Failed',
+        message: 'Failed to export claims. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: ClaimStatus) => {
     const configs = {
@@ -94,9 +151,22 @@ const ClaimsPage: React.FC = () => {
           <p className="text-gray-600 mt-1">Review and process insurance claims ({claims.length} total)</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+          <button
+            onClick={handleExport}
+            disabled={filteredClaims.length === 0 || exportLoading}
+            className="flex items-center px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exportLoading ? (
+              <>
+                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-2" />
+                Export
+              </>
+            )}
           </button>
         </div>
       </div>

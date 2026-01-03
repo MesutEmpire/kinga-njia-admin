@@ -23,7 +23,7 @@ export const claimService = {
     },
 
     update: async (id: number, data: UpdateClaimRequest): Promise<Claim> => {
-        const response = await apiClient.put<Claim>(`/claims/${id}`, data);
+        const response = await apiClient.patch<Claim>(`/claims/${id}`, data);
         return response.data;
     },
 
