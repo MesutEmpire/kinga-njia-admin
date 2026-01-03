@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.kinganjia.backend.model.UserRole;
 
 @Data
 @NoArgsConstructor
@@ -24,4 +25,6 @@ public class UserRequestDTO {
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
+
+    private UserRole role;
 }
