@@ -6,6 +6,8 @@ export const useImages = () => {
     return useQuery({
         queryKey: ['images'],
         queryFn: imageService.getAll,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+        refetchOnWindowFocus: false,
     });
 };
 
@@ -14,6 +16,7 @@ export const useImage = (id: number) => {
         queryKey: ['images', id],
         queryFn: () => imageService.getById(id),
         enabled: !!id,
+        staleTime: 60 * 1000, // 1 minute
     });
 };
 
@@ -22,6 +25,7 @@ export const useImagesByClaim = (claimId: number) => {
         queryKey: ['images', 'claim', claimId],
         queryFn: () => imageService.getByClaimId(claimId),
         enabled: !!claimId,
+        staleTime: 60 * 1000, // 1 minute
     });
 };
 
