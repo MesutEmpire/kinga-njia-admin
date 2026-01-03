@@ -1,41 +1,122 @@
-import React, { useState } from 'react';
-import { 
-  Settings as SettingsIcon, 
-  Bell, 
-  Shield, 
-  Download, 
+import React, { useState, useEffect } from 'react';
+import {
+  Settings as SettingsIcon,
+  Bell,
+  Shield,
+  Download,
   Upload,
   Users,
   Activity,
   Save,
-  RefreshCw
+  RefreshCw,
+  Loader
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAlertDialog } from '../components/ui/AlertDialog';
+import { useSettings } from '../hooks/useSettings';
+import { notificationService } from '../api/services/notifications';
+import { NotificationType } from '../types/api';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
+  const { showAlert } = useAlertDialog();
+  const { settings, isLoading: settingsLoading, updateSettings, isUpdating } = useSettings();
   const [activeTab, setActiveTab] = useState('general');
+  const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState({
-    newClaims: true,
-    statusUpdates: true,
-    systemAlerts: true,
-    dailyReports: false,
-    weeklyReports: true
+    NEW_CLAIM: true,
+    STATUS_UPDATE: true,
+    SYSTEM_ALERT: true,
+    DAILY_REPORT: false,
+    WEEKLY_REPORT: true,
+    ASSIGNMENT: true,
+    COMMENT: true,
+  });
+
+  const [profileData, setProfileData] = useState({
+    organizationName: '',
+    organizationEmail: '',
+    organizationPhone: '',
+    organizationAddress: ''
   });
 
   const [detectionSettings, setDetectionSettings] = useState({
-    sensitivity: 'medium',
-    autoProcess: false,
-    requireManualReview: true,
-    hashValidation: true
+    emailNotificationsEnabled: false,
+    systemAlertNotifications: true,
   });
 
   const [systemSettings, setSystemSettings] = useState({
-    sessionTimeout: '4',
-    maxFileSize: '10',
-    retentionPeriod: '365',
+    sessionTimeoutMinutes: 240,
+    dataRetentionDays: 365,
     backupFrequency: 'daily'
   });
+
+  // Load settings on mount
+  useEffect(() => {
+    if (settings && settings.id) {
+      setProfileData({
+        organizationName: settings.organizationName || '',
+        organizationEmail: settings.organizationEmail || '',
+        organizationPhone: settings.organizationPhone || '',
+        organizationAddress: settings.organizationAddress || ''
+      });
+      setDetectionSettings({
+        emailNotificationsEnabled: settings.emailNotificationsEnabled || false,
+        systemAlertNotifications: settings.systemAlertNotifications || true,
+      });
+      setSystemSettings({
+        sessionTimeoutMinutes: settings.sessionTimeoutMinutes || 240,
+        dataRetentionDays: settings.dataRetentionDays || 365,
+        backupFrequency: settings.backupFrequency || 'daily'
+      });
+    }
+  }, [settings]);
+
+  // Load notification preferences on mount
+  useEffect(() => {
+    if (user?.id) {
+      loadNotificationPreferences();
+    }
+  }, [user?.id]);
+
+  const loadNotificationPreferences = async () => {
+    try {
+      setLoading(true);
+      const userNotifications = await notificationService.getUserNotifications(user!.id);
+      const prefs: any = {};
+      Object.values(NotificationType).forEach(type => {
+        const notification = userNotifications.find(n => n.type === type);
+        prefs[type] = notification?.isEnabled ?? true;
+      });
+      setNotifications(prefs);
+    } catch (error) {
+      console.error('Failed to load notification preferences:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotificationChange = async (type: NotificationType, enabled: boolean) => {
+    if (!user?.id) return;
+
+    try {
+      setLoading(true);
+      await notificationService.togglePreference(user.id, type, enabled);
+      setNotifications(prev => ({
+        ...prev,
+        [type]: enabled
+      }));
+      showAlert({
+        title: 'Preferences Updated',
+        message: 'Notification preferences saved successfully.',
+        type: 'success'
+      });
+    } catch (error) {
+      console.error('Failed to update notification preference:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const tabs = [
     { id: 'general', name: 'General', icon: SettingsIcon },
@@ -45,28 +126,27 @@ const SettingsPage: React.FC = () => {
     { id: 'data', name: 'Data Management', icon: Download }
   ];
 
-  const TabButton: React.FC<{ 
-    tab: typeof tabs[0]; 
-    isActive: boolean; 
-    onClick: () => void 
+  const TabButton: React.FC<{
+    tab: typeof tabs[0];
+    isActive: boolean;
+    onClick: () => void
   }> = ({ tab, isActive, onClick }) => (
     <button
       onClick={onClick}
-      className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${
-        isActive 
-          ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600' 
-          : 'text-gray-600 hover:bg-gray-100'
-      }`}
+      className={`flex items-center w-full px-4 py-3 text-left rounded-lg transition-colors ${isActive
+        ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
+        : 'text-gray-600 hover:bg-gray-100'
+        }`}
     >
       <tab.icon className="w-5 h-5 mr-3" />
       {tab.name}
     </button>
   );
 
-  const SettingCard: React.FC<{ 
-    title: string; 
-    description: string; 
-    children: React.ReactNode 
+  const SettingCard: React.FC<{
+    title: string;
+    description: string;
+    children: React.ReactNode
   }> = ({ title, description, children }) => (
     <div className="bg-white p-6 rounded-lg border border-gray-200">
       <div className="mb-4">
@@ -82,8 +162,38 @@ const SettingsPage: React.FC = () => {
       case 'general':
         return (
           <div className="space-y-6">
-            <SettingCard 
-              title="System Information" 
+            <SettingCard
+              title="User Profile"
+              description="Your account information and role"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Name:</span>
+                    <span className="font-medium">{user?.firstName} {user?.lastName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Email:</span>
+                    <span className="font-medium">{user?.email}</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Role:</span>
+                    <span className="inline-block px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+                      {user?.role?.toUpperCase().replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Account Created:</span>
+                    <span className="font-medium">{new Date(user?.createdAt || '').toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+            </SettingCard>
+
+            <SettingCard
+              title="System Information"
               description="View basic system information and status"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -124,8 +234,8 @@ const SettingsPage: React.FC = () => {
               </div>
             </SettingCard>
 
-            <SettingCard 
-              title="System Settings" 
+            <SettingCard
+              title="System Settings"
               description="Configure basic system behavior and preferences"
             >
               <div className="space-y-4">
@@ -133,9 +243,9 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Session Timeout (hours)
                   </label>
-                  <select 
+                  <select
                     value={systemSettings.sessionTimeout}
-                    onChange={(e) => setSystemSettings({...systemSettings, sessionTimeout: e.target.value})}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, sessionTimeout: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="1">1 hour</option>
@@ -149,9 +259,9 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Maximum File Size (MB)
                   </label>
-                  <select 
+                  <select
                     value={systemSettings.maxFileSize}
-                    onChange={(e) => setSystemSettings({...systemSettings, maxFileSize: e.target.value})}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, maxFileSize: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="5">5 MB</option>
@@ -168,36 +278,48 @@ const SettingsPage: React.FC = () => {
       case 'notifications':
         return (
           <div className="space-y-6">
-            <SettingCard 
-              title="Notification Preferences" 
+            <SettingCard
+              title="Notification Preferences"
               description="Configure what notifications you want to receive"
             >
               <div className="space-y-4">
-                {Object.entries(notifications).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900 capitalize">
-                        {key.replace(/([A-Z])/g, ' $1').trim()}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {key === 'newClaims' && 'Get notified when new claims are submitted'}
-                        {key === 'statusUpdates' && 'Receive updates when claim statuses change'}
-                        {key === 'systemAlerts' && 'Important system notifications and alerts'}
-                        {key === 'dailyReports' && 'Daily summary reports sent to your email'}
-                        {key === 'weeklyReports' && 'Weekly analytics and performance reports'}
-                      </p>
+                {Object.entries(notifications).map(([type, enabled]) => {
+                  const getDescription = (t: string) => {
+                    const descriptions: { [key: string]: string } = {
+                      NEW_CLAIM: 'Get notified when new claims are submitted',
+                      STATUS_UPDATE: 'Receive updates when claim statuses change',
+                      SYSTEM_ALERT: 'Important system notifications and alerts',
+                      DAILY_REPORT: 'Daily summary reports sent to your email',
+                      WEEKLY_REPORT: 'Weekly analytics and performance reports',
+                      ASSIGNMENT: 'Get notified when claims are assigned to you',
+                      COMMENT: 'Receive notifications for new comments on your claims'
+                    };
+                    return descriptions[t] || '';
+                  };
+
+                  return (
+                    <div key={type} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {type.replace(/_/g, ' ')}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {getDescription(type)}
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          disabled={loading}
+                          onChange={(e) => handleNotificationChange(type as NotificationType, e.target.checked)}
+                          className="sr-only peer disabled:opacity-50"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={value}
-                        onChange={(e) => setNotifications({...notifications, [key]: e.target.checked})}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </SettingCard>
           </div>
@@ -206,8 +328,8 @@ const SettingsPage: React.FC = () => {
       case 'detection':
         return (
           <div className="space-y-6">
-            <SettingCard 
-              title="Accident Detection Settings" 
+            <SettingCard
+              title="Accident Detection Settings"
               description="Configure how the mobile app detects and processes accidents"
             >
               <div className="space-y-4">
@@ -215,9 +337,9 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Detection Sensitivity
                   </label>
-                  <select 
+                  <select
                     value={detectionSettings.sensitivity}
-                    onChange={(e) => setDetectionSettings({...detectionSettings, sensitivity: e.target.value})}
+                    onChange={(e) => setDetectionSettings({ ...detectionSettings, sensitivity: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="low">Low - Fewer false positives</option>
@@ -236,7 +358,7 @@ const SettingsPage: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={detectionSettings.autoProcess}
-                        onChange={(e) => setDetectionSettings({...detectionSettings, autoProcess: e.target.checked})}
+                        onChange={(e) => setDetectionSettings({ ...detectionSettings, autoProcess: e.target.checked })}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -252,7 +374,7 @@ const SettingsPage: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={detectionSettings.requireManualReview}
-                        onChange={(e) => setDetectionSettings({...detectionSettings, requireManualReview: e.target.checked})}
+                        onChange={(e) => setDetectionSettings({ ...detectionSettings, requireManualReview: e.target.checked })}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -268,7 +390,7 @@ const SettingsPage: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={detectionSettings.hashValidation}
-                        onChange={(e) => setDetectionSettings({...detectionSettings, hashValidation: e.target.checked})}
+                        onChange={(e) => setDetectionSettings({ ...detectionSettings, hashValidation: e.target.checked })}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
@@ -283,8 +405,8 @@ const SettingsPage: React.FC = () => {
       case 'security':
         return (
           <div className="space-y-6">
-            <SettingCard 
-              title="Security Settings" 
+            <SettingCard
+              title="Security Settings"
               description="Manage security policies and access controls"
             >
               <div className="space-y-4">
@@ -333,8 +455,8 @@ const SettingsPage: React.FC = () => {
       case 'data':
         return (
           <div className="space-y-6">
-            <SettingCard 
-              title="Data Export" 
+            <SettingCard
+              title="Data Export"
               description="Export claims data for analysis or compliance"
             >
               <div className="space-y-4">
@@ -362,8 +484,8 @@ const SettingsPage: React.FC = () => {
               </div>
             </SettingCard>
 
-            <SettingCard 
-              title="Data Retention" 
+            <SettingCard
+              title="Data Retention"
               description="Configure how long data is stored in the system"
             >
               <div className="space-y-4">
@@ -371,9 +493,9 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Data Retention Period (days)
                   </label>
-                  <select 
+                  <select
                     value={systemSettings.retentionPeriod}
-                    onChange={(e) => setSystemSettings({...systemSettings, retentionPeriod: e.target.value})}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, retentionPeriod: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="90">90 days</option>
@@ -388,9 +510,9 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Backup Frequency
                   </label>
-                  <select 
+                  <select
                     value={systemSettings.backupFrequency}
-                    onChange={(e) => setSystemSettings({...systemSettings, backupFrequency: e.target.value})}
+                    onChange={(e) => setSystemSettings({ ...systemSettings, backupFrequency: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="daily">Daily</option>
@@ -409,8 +531,32 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleSaveSettings = () => {
-    // In production, this would save settings via API
-    console.log('Saving settings...', { notifications, detectionSettings, systemSettings });
+    updateSettings({
+      organizationName: profileData.organizationName,
+      organizationEmail: profileData.organizationEmail,
+      organizationPhone: profileData.organizationPhone,
+      organizationAddress: profileData.organizationAddress,
+      emailNotificationsEnabled: detectionSettings.emailNotificationsEnabled,
+      systemAlertNotifications: detectionSettings.systemAlertNotifications,
+      sessionTimeoutMinutes: systemSettings.sessionTimeoutMinutes,
+      dataRetentionDays: systemSettings.dataRetentionDays,
+      backupFrequency: systemSettings.backupFrequency,
+    }, {
+      onSuccess: () => {
+        showAlert({
+          title: 'Settings Saved',
+          message: 'Your settings have been saved successfully!',
+          type: 'success'
+        });
+      },
+      onError: () => {
+        showAlert({
+          title: 'Save Failed',
+          message: 'Failed to save settings. Please try again.',
+          type: 'error'
+        });
+      }
+    });
   };
 
   return (
@@ -432,7 +578,7 @@ const SettingsPage: React.FC = () => {
 
       {/* Settings Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        
+
         {/* Sidebar Navigation */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">

@@ -17,13 +17,50 @@ export enum DetectionType {
     MANUAL = 'MANUAL',
 }
 
+export enum UserRole {
+    ADMIN = 'ADMIN',
+    INVESTIGATOR = 'INVESTIGATOR',
+    ANALYST = 'ANALYST',
+    STAFF = 'STAFF',
+}
+
+export enum NotificationType {
+    NEW_CLAIM = 'NEW_CLAIM',
+    STATUS_UPDATE = 'STATUS_UPDATE',
+    SYSTEM_ALERT = 'SYSTEM_ALERT',
+    DAILY_REPORT = 'DAILY_REPORT',
+    WEEKLY_REPORT = 'WEEKLY_REPORT',
+    ASSIGNMENT = 'ASSIGNMENT',
+    COMMENT = 'COMMENT',
+}
+
+export interface Notification {
+    id: number;
+    type: NotificationType;
+    title: string;
+    message: string;
+    isRead: boolean;
+    isEnabled: boolean;
+    createdAt: string;
+    readAt?: string;
+}
+
+export interface NotificationPreference {
+    type: NotificationType;
+    isEnabled: boolean;
+    displayName: string;
+    description?: string;
+}
+
 export interface User {
     id: number;
     email: string;
     firstName: string;
     lastName: string;
+    role: UserRole;
     createdAt: string;
     updatedAt: string;
+    notifications?: Notification[];
 }
 
 export interface Image {
@@ -58,12 +95,14 @@ export interface CreateUserRequest {
     firstName: string;
     lastName: string;
     password: string;
+    role?: UserRole;
 }
 
 export interface UpdateUserRequest {
     email?: string;
     firstName?: string;
     lastName?: string;
+    role?: UserRole;
 }
 
 export interface CreateClaimRequest {

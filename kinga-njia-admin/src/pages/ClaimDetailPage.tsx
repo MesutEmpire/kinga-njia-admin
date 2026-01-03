@@ -16,12 +16,14 @@ import {
 } from 'lucide-react';
 import { useClaim, useUpdateClaim } from '../hooks/useClaims';
 import { useImagesByClaim } from '../hooks/useImages';
+import { useAlertDialog } from '../components/ui/AlertDialog';
 import { ClaimStatus, SeverityLevel } from '../types/api';
 import { format } from 'date-fns';
 
 const ClaimDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { showAlert } = useAlertDialog();
   const claimId = id ? parseInt(id) : 0;
 
   const { data: claim, isLoading: claimLoading, error: claimError } = useClaim(claimId);
@@ -54,11 +56,19 @@ const ClaimDetailPage: React.FC = () => {
         id: claimId,
         data: { status: newStatus }
       });
-      alert(`Claim #${claimId} has been ${newStatus.toLowerCase()} successfully!`);
+      showAlert({
+        title: 'Status Updated',
+        message: `Claim #${claimId} has been ${newStatus.toLowerCase()} successfully!`,
+        type: 'success'
+      });
       setShowStatusModal(false);
     } catch (error) {
       console.error('Error updating claim status:', error);
-      alert('Failed to update claim status. Please try again.');
+      showAlert({
+        title: 'Update Failed',
+        message: 'Failed to update claim status. Please try again.',
+        type: 'error'
+      });
     }
   };
 

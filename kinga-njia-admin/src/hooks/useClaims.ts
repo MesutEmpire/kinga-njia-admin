@@ -6,6 +6,8 @@ export const useClaims = () => {
     return useQuery({
         queryKey: ['claims'],
         queryFn: claimService.getAll,
+        staleTime: 60 * 1000, // 1 minute
+        refetchOnWindowFocus: true,
     });
 };
 
@@ -14,6 +16,7 @@ export const useClaim = (id: number) => {
         queryKey: ['claims', id],
         queryFn: () => claimService.getById(id),
         enabled: !!id,
+        staleTime: 30 * 1000, // 30 seconds
     });
 };
 
@@ -32,6 +35,8 @@ export const useCreateClaim = () => {
         mutationFn: (data: CreateClaimRequest) => claimService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['claims'] });
+            queryClient.invalidateQueries({ queryKey: ['statistics'] });
+            queryClient.invalidateQueries({ queryKey: ['todayActivity'] });
         },
     });
 };
@@ -45,6 +50,8 @@ export const useUpdateClaim = () => {
         onSuccess: (_, variables) => {
             queryClient.invalidateQueries({ queryKey: ['claims'] });
             queryClient.invalidateQueries({ queryKey: ['claims', variables.id] });
+            queryClient.invalidateQueries({ queryKey: ['statistics'] });
+            queryClient.invalidateQueries({ queryKey: ['todayActivity'] });
         },
     });
 };
@@ -56,6 +63,8 @@ export const useDeleteClaim = () => {
         mutationFn: (id: number) => claimService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['claims'] });
+            queryClient.invalidateQueries({ queryKey: ['statistics'] });
+            queryClient.invalidateQueries({ queryKey: ['todayActivity'] });
         },
     });
 };

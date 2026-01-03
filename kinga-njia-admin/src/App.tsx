@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AlertDialogProvider } from './components/ui/AlertDialog';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -31,10 +32,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user } = useAuth();
-
-  useEffect(() => {
-    console.log('AppRoutes mounted, user:', user);
-  }, [user]);
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
   return (
     <Routes>
@@ -86,9 +84,13 @@ function AppRoutes() {
         path="/staff"
         element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <StaffPage />
-            </DashboardLayout>
+            {isAdmin ? (
+              <DashboardLayout>
+                <StaffPage />
+              </DashboardLayout>
+            ) : (
+              <Navigate to="/" replace />
+            )}
           </ProtectedRoute>
         }
       />
@@ -107,15 +109,13 @@ function AppRoutes() {
 }
 
 function App() {
-  useEffect(() => {
-    console.log('App component mounted');
-  }, []);
-
   return (
     <ErrorBoundary>
       <Router>
         <AuthProvider>
-          <AppRoutes />
+          <AlertDialogProvider>
+            <AppRoutes />
+          </AlertDialogProvider>
         </AuthProvider>
       </Router>
     </ErrorBoundary>
