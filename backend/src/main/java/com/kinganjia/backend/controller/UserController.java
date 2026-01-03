@@ -38,7 +38,7 @@ public class UserController {
 
     @GetMapping("/{id}/claims")
     public ResponseEntity<ApiResponse<List<ClaimResponseDTO>>> getUserClaims(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok("User claims retrieved successfully", claimService.getClaimByUserIdl(id)));
+        return ResponseEntity.ok(ApiResponse.ok("User claims retrieved successfully", claimService.getClaimByUserId(id)));
     }
 
     @PostMapping
@@ -63,11 +63,5 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.noContent("User deleted successfully"));
-    }
-
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>> deleteAllUser() {
-        userService.deleteAllUsers();
-        return ResponseEntity.ok(ApiResponse.noContent("Users deleted successfully"));
     }
 }

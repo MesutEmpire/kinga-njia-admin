@@ -1,26 +1,24 @@
 package com.kinganjia.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.kinganjia.backend.model.UserRole;
+import com.kinganjia.backend.model.NotificationType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class UserResponseDTO {
+public class NotificationDTO {
     private Long id;
-    private String email;
-    private String firstName;
-    private String lastName;
-    private UserRole role;
+    private NotificationType type;
+    private String title;
+    private String message;
+    private Boolean isRead;
+    private Boolean isEnabled;
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private List<ClaimSummaryDTO> claims;
-    private List<NotificationDTO> notifications;
+    private LocalDateTime readAt;
 }
