@@ -1,5 +1,6 @@
 package com.kinganjia.backend.dto;
 
+import com.kinganjia.backend.model.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,4 +13,5 @@ public class UserSummaryDTO {
     private String email;
     private String firstName;
     private String lastName;
+    private UserRole role;
 }

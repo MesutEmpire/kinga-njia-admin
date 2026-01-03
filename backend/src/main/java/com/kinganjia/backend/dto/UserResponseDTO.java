@@ -1,6 +1,7 @@
 package com.kinganjia.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.kinganjia.backend.model.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,9 @@ public class UserResponseDTO {
     private String email;
     private String firstName;
     private String lastName;
+    private UserRole role;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<ClaimSummaryDTO> claims;
+    private List<NotificationDTO> notifications;
 }

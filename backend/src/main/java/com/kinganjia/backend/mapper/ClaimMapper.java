@@ -17,12 +17,18 @@ public interface ClaimMapper {
     @Mapping(target = "user", source = "userId", qualifiedByName = "mapUserIdToUser")
     Claim  toEntity(ClaimRequestDTO claimRequestDTO);
 
-    // For partial updates - ignore null values
+    // For partial updates - ignore null values and skip user reference
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void updateClaimFromDto(ClaimRequestDTO dto, @MappingTarget Claim claim);
 
-    // For full updates - update all values including nulls
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.SET_TO_NULL)
+    // For full updates - update all values but preserve user, images, and timestamps
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "user", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     void fullUpdateClaimFromDto(ClaimRequestDTO dto, @MappingTarget Claim claim);
 
     @Named("mapUserIdToUser")

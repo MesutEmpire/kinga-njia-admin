@@ -10,18 +10,21 @@ import com.kinganjia.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional
 public class ClaimService {
     private final ClaimRepository claimRepository;
     private final ClaimMapper claimMapper;
     private final UserRepository userRepository;
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
 
     public List<ClaimResponseDTO> getAllClaims() {
         List<Claim> claims = claimRepository.findAll();
@@ -29,12 +32,14 @@ public class ClaimService {
     }
 
     public ClaimResponseDTO getClaimById(Long id) {
-        Claim claim = claimRepository.findById(id).orElseThrow(() -> new RuntimeException("Claim not found"));
+        Claim claim = claimRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Claim not found with id: " + id));
         return claimMapper.toResponse(claim);
     }
 
-    public List<ClaimResponseDTO> getClaimByUserIdl(Long id) {
-        List<Claim> claims =claimRepository.findByUserId(id).orElseThrow(() -> new RuntimeException("Claim not found"));
+    public List<ClaimResponseDTO> getClaimByUserId(Long id) {
+        List<Claim> claims = claimRepository.findByUserId(id)
+            .orElseThrow(() -> new ResourceNotFoundException("No claims found for user with id: " + id));
         return claims.stream().map(claimMapper::toResponse).collect(Collectors.toList());
     }
 
@@ -74,6 +79,40 @@ public class ClaimService {
     }
 
     private Claim findClaimById(Long id){
-        return claimRepository.findById(id).orElseThrow(() -> new RuntimeException("Claim not found with id: " + id));
+        return claimRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Claim not found with id: " + id));
+    }
+
+    @Transactional(readOnly = true)
+    public String generateClaimsCSV() {
+        List<Claim> claims = claimRepository.findAll();
+        
+        StringBuilder csv = new StringBuilder();
+        csv.append("\uFEFF");
+        csv.append("\"Claim ID\",\"User Name\",\"User Email\",\"Location\",\"Created Date\",\"Status\",\"Severity\",\"Description\",\"Detection Type\",\"Hash\",\"Images Count\"\n");
+        
+        for (Claim claim : claims) {
+            csv.append(escapeCsvValue(String.valueOf(claim.getId()))).append(",");
+            csv.append(escapeCsvValue(claim.getUser().getFirstName() + " " + claim.getUser().getLastName())).append(",");
+            csv.append(escapeCsvValue(claim.getUser().getEmail())).append(",");
+            csv.append(escapeCsvValue(claim.getLocation())).append(",");
+            csv.append(escapeCsvValue(claim.getCreatedAt().format(DATE_FORMATTER))).append(",");
+            csv.append(escapeCsvValue(claim.getStatus().name())).append(",");
+            csv.append(escapeCsvValue(claim.getSeverity().name())).append(",");
+            csv.append(escapeCsvValue(claim.getDescription())).append(",");
+            csv.append(escapeCsvValue(claim.getDetectionType().name())).append(",");
+            csv.append(escapeCsvValue(claim.getHash())).append(",");
+            csv.append(escapeCsvValue(String.valueOf(claim.getImages() != null ? claim.getImages().size() : 0)));
+            csv.append("\n");
+        }
+        
+        return csv.toString();
+    }
+
+    private String escapeCsvValue(String value) {
+        if (value == null) {
+            return "\"\"";
+        }
+        return "\"" + value.replace("\"", "\"\"") + "\"";
     }
 }

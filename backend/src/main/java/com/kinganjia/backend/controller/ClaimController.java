@@ -8,10 +8,14 @@ import com.kinganjia.backend.service.ClaimService;
 import com.kinganjia.backend.service.ImageService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @RestController
@@ -65,9 +69,18 @@ public class ClaimController {
         return ResponseEntity.ok(ApiResponse.noContent("Claim deleted successfully"));
     }
 
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>> deleteAllClaim() {
-        claimService.deleteAllClaims();
-        return ResponseEntity.ok(ApiResponse.noContent("Claims deleted successfully"));
+    @GetMapping("/export/csv")
+    public ResponseEntity<byte[]> exportClaimsAsCSV() {
+        String csvContent = claimService.generateClaimsCSV();
+        byte[] csvBytes = csvContent.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        
+        String filename = "claims-export-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")) + ".csv";
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(csvBytes.length);
+        
+        return new ResponseEntity<>(csvBytes, headers, HttpStatus.OK);
     }
 }

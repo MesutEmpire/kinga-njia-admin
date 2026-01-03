@@ -13,8 +13,8 @@ import java.util.List;
 @Builder
 @Getter
 @Setter
-@ToString(exclude = {"claims"}) // Exclude relationships
-@EqualsAndHashCode(exclude = {"claims"}) // Exclude relationships
+@ToString(exclude = {"claims", "notifications"}) // Exclude relationships
+@EqualsAndHashCode(exclude = {"claims", "notifications"}) // Exclude relationships
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,6 +31,11 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private UserRole role = UserRole.STAFF;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -56,4 +61,13 @@ public class User {
             },
             orphanRemoval = false)
     List<Claim> claims;
+
+    @OneToMany(
+            mappedBy = "user",
+            cascade = {
+                    CascadeType.PERSIST,
+                    CascadeType.MERGE
+            },
+            orphanRemoval = true)
+    List<Notification> notifications;
 }

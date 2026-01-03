@@ -55,10 +55,4 @@ public class ImageController {
         imageService.deleteImage(id);
         return ResponseEntity.ok(ApiResponse.noContent("Image deleted successfully"));
     }
-
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>> deleteAllImage() {
-        imageService.deleteAllImages();
-        return ResponseEntity.ok(ApiResponse.noContent("Images deleted successfully"));
-    }
 }
