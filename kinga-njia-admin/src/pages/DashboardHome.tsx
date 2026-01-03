@@ -1,9 +1,28 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, CheckCircle, Clock, XCircle, MapPin, Loader, TrendingUp } from 'lucide-react';
+import {
+  FileText,
+  CheckCircle,
+  Clock,
+  XCircle,
+  MapPin,
+  Loader,
+  TrendingUp,
+  AlertCircle,
+  Server,
+  Database,
+  Zap,
+} from 'lucide-react';
 import { useClaims } from '../hooks/useClaims';
+import { useStatistics, useTodayActivity } from '../hooks/useStatistics';
 import { ClaimStatus } from '../types/api';
 import { format } from 'date-fns';
+
+interface SystemStatus {
+  api: 'online' | 'offline' | 'unknown';
+  database: 'healthy' | 'degraded' | 'offline';
+  sync: 'active' | 'inactive';
+}
 
 const StatCard: React.FC<{
   title: string;
@@ -18,13 +37,14 @@ const StatCard: React.FC<{
       <div>
         <p className="text-sm font-medium text-gray-600">{title}</p>
         <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
-        <p className={`text-sm mt-1 ${changeType === 'increase' ? 'text-green-600' : 'text-red-600'}`}>
-          {changeType === 'increase' ? '↗' : '↘'} {change} from last month
+        <p
+          className={`text-sm mt-1 ${changeType === 'increase' ? 'text-green-600' : 'text-red-600'
+            }`}
+        >
+          {changeType === 'increase' ? '↗' : '↘'} {change} from last period
         </p>
       </div>
-      <div className={`p-3 rounded-lg ${color}`}>
-        {icon}
-      </div>
+      <div className={`p-3 rounded-lg ${color}`}>{icon}</div>
     </div>
   </div>
 );
@@ -39,7 +59,7 @@ const RecentClaim: React.FC<{
     PENDING: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending' },
     VERIFIED: { color: 'bg-green-100 text-green-800', text: 'Verified' },
     REJECTED: { color: 'bg-red-100 text-red-800', text: 'Rejected' },
-    RESOLVED: { color: 'bg-blue-100 text-blue-800', text: 'Resolved' }
+    RESOLVED: { color: 'bg-blue-100 text-blue-800', text: 'Resolved' },
   };
 
   return (
@@ -57,7 +77,9 @@ const RecentClaim: React.FC<{
         </div>
       </div>
       <div className="text-right">
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[status].color}`}>
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[status].color}`}
+        >
           {statusConfig[status].text}
         </span>
         <p className="text-sm text-gray-500 mt-1">{time}</p>
@@ -66,60 +88,186 @@ const RecentClaim: React.FC<{
   );
 };
 
-const DashboardHome: React.FC = () => {
-  const { data: claims = [], isLoading, error } = useClaims();
+const SystemStatusIndicator: React.FC<{
+  label: string;
+  status: 'online' | 'offline' | 'unknown' | 'healthy' | 'degraded' | 'active' | 'inactive';
+  icon: React.ReactNode;
+}> = ({ label, status, icon }) => {
+  const getColor = () => {
+    switch (status) {
+      case 'online':
+      case 'healthy':
+      case 'active':
+        return 'text-green-600';
+      case 'offline':
+      case 'inactive':
+        return 'text-red-600';
+      case 'degraded':
+        return 'text-yellow-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
 
-  // Calculate stats from real data
-  const totalClaims = claims.length;
-  const verifiedClaims = claims.filter(c => c.status === ClaimStatus.VERIFIED).length;
-  const pendingClaims = claims.filter(c => c.status === ClaimStatus.PENDING).length;
-  const rejectedClaims = claims.filter(c => c.status === ClaimStatus.REJECTED).length;
+  const getBgColor = () => {
+    switch (status) {
+      case 'online':
+      case 'healthy':
+      case 'active':
+        return 'bg-green-500';
+      case 'offline':
+      case 'inactive':
+        return 'bg-red-500';
+      case 'degraded':
+        return 'bg-yellow-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-2 text-gray-600">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <span className={`flex items-center ${getColor()}`}>
+        <div className={`w-2 h-2 ${getBgColor()} rounded-full mr-2`}></div>
+        <span className="capitalize text-sm font-medium">{status}</span>
+      </span>
+    </div>
+  );
+};
+
+const DashboardHome: React.FC = () => {
+  const { data: claims = [], isLoading: claimsLoading, error: claimsError } = useClaims();
+  const {
+    data: statistics,
+    isLoading: statsLoading,
+    error: statsError,
+  } = useStatistics();
+  const {
+    data: todayActivity,
+    isLoading: todayLoading,
+    error: todayError,
+  } = useTodayActivity();
+
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
+    api: 'unknown',
+    database: 'healthy',
+    sync: 'inactive',
+  });
+
+  const isLoading = claimsLoading || statsLoading || todayLoading;
+  const error = claimsError || statsError || todayError;
+
+  // Check system health based on data availability
+  useEffect(() => {
+    const checkSystemHealth = () => {
+      // API is online if we can fetch data
+      const apiOnline = !claimsError && !statsError ? 'online' : 'offline';
+
+      // Database is healthy if statistics are available
+      const dbHealthy = statistics ? 'healthy' : 'degraded';
+
+      // Sync is active if today's activity data is available
+      const syncActive = todayActivity ? 'active' : 'inactive';
+
+      setSystemStatus({
+        api: apiOnline as 'online' | 'offline',
+        database: dbHealthy as 'healthy' | 'degraded',
+        sync: syncActive as 'active' | 'inactive',
+      });
+    };
+
+    checkSystemHealth();
+  }, [statistics, todayActivity, claimsError, statsError, todayError]);
+
+  // Calculate all statistics dynamically
+  const {
+    totalClaims,
+    verifiedClaims,
+    pendingClaims,
+    rejectedClaims,
+    resolvedClaims,
+    percentageChanges,
+  } = useMemo(() => {
+    // Use backend statistics if available, otherwise calculate from claims
+    const total = statistics?.totalClaims || claims.length;
+    const verified =
+      statistics?.verifiedClaims || claims.filter((c) => c.status === ClaimStatus.VERIFIED).length;
+    const pending =
+      statistics?.pendingClaims || claims.filter((c) => c.status === ClaimStatus.PENDING).length;
+    const rejected =
+      statistics?.rejectedClaims || claims.filter((c) => c.status === ClaimStatus.REJECTED).length;
+    const resolved =
+      statistics?.resolvedClaims || claims.filter((c) => c.status === ClaimStatus.RESOLVED).length;
+
+    // Use percentages from backend, or fallback to frontend calculation
+    const changes = {
+      verified: `${statistics?.verifiedPercentage ?? ((total > 0 ? (verified / total) * 100 : 0).toFixed(1))}%`,
+      pending: `${statistics?.pendingPercentage ?? ((total > 0 ? (pending / total) * 100 : 0).toFixed(1))}%`,
+      rejected: `${statistics?.rejectedPercentage ?? ((total > 0 ? (rejected / total) * 100 : 0).toFixed(1))}%`,
+      resolved: `${statistics?.resolvedPercentage ?? ((total > 0 ? (resolved / total) * 100 : 0).toFixed(1))}%`,
+    };
+
+    return {
+      totalClaims: total,
+      verifiedClaims: verified,
+      pendingClaims: pending,
+      rejectedClaims: rejected,
+      resolvedClaims: resolved,
+      percentageChanges: changes,
+    };
+  }, [statistics, claims]);
 
   const stats = [
     {
       title: 'Total Claims',
       value: totalClaims.toString(),
-      change: '+12%',
+      change: percentageChanges.verified,
       changeType: 'increase' as const,
       icon: <FileText className="w-6 h-6 text-blue-600" />,
-      color: 'bg-blue-100'
+      color: 'bg-blue-100',
     },
     {
       title: 'Verified Claims',
       value: verifiedClaims.toString(),
-      change: '+8%',
+      change: percentageChanges.verified,
       changeType: 'increase' as const,
       icon: <CheckCircle className="w-6 h-6 text-green-600" />,
-      color: 'bg-green-100'
+      color: 'bg-green-100',
     },
     {
       title: 'Pending Claims',
       value: pendingClaims.toString(),
-      change: '+5%',
-      changeType: 'increase' as const,
+      change: percentageChanges.pending,
+      changeType: (pendingClaims > totalClaims * 0.3 ? 'increase' : 'decrease') as const,
       icon: <Clock className="w-6 h-6 text-yellow-600" />,
-      color: 'bg-yellow-100'
+      color: 'bg-yellow-100',
     },
     {
       title: 'Rejected Claims',
       value: rejectedClaims.toString(),
-      change: '-3%',
+      change: percentageChanges.rejected,
       changeType: 'decrease' as const,
       icon: <XCircle className="w-6 h-6 text-red-600" />,
-      color: 'bg-red-100'
-    }
+      color: 'bg-red-100',
+    },
   ];
 
   // Get recent claims (last 5)
-  const recentClaims = claims
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5)
-    .map(claim => ({
-      id: claim.id,
-      status: claim.status,
-      location: claim.location,
-      time: format(new Date(claim.createdAt), 'MMM dd, HH:mm')
-    }));
+  const recentClaims = useMemo(() => {
+    return claims
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+      .map((claim) => ({
+        id: claim.id,
+        status: claim.status,
+        location: claim.location,
+        time: format(new Date(claim.createdAt), 'MMM dd, HH:mm'),
+      }));
+  }, [claims]);
 
   if (isLoading) {
     return (
@@ -131,8 +279,14 @@ const DashboardHome: React.FC = () => {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">Error loading dashboard data. Please try again later.</p>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
+        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-red-800 font-medium">Error loading dashboard data</p>
+          <p className="text-red-700 text-sm mt-1">
+            Please refresh the page or contact support if the problem persists.
+          </p>
+        </div>
       </div>
     );
   }
@@ -160,7 +314,6 @@ const DashboardHome: React.FC = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
         {/* Recent Claims */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -176,17 +329,21 @@ const DashboardHome: React.FC = () => {
               </div>
             </div>
             <div className="p-6 space-y-2">
-              {recentClaims.map((claim) => (
-                <RecentClaim key={claim.id} {...claim} />
-              ))}
+              {recentClaims.length > 0 ? (
+                recentClaims.map((claim) => <RecentClaim key={claim.id} {...claim} />)
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                  <p>No recent claims</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Quick Stats */}
         <div className="space-y-6">
-
-          {/* Claims Today */}
+          {/* Today's Activity */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Today's Activity</h3>
@@ -195,19 +352,19 @@ const DashboardHome: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">New Claims</span>
-                <span className="font-semibold">23</span>
+                <span className="font-semibold">{todayActivity?.newClaims || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Processed</span>
-                <span className="font-semibold">18</span>
+                <span className="font-semibold">{todayActivity?.processed || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Verified</span>
-                <span className="font-semibold text-green-600">12</span>
+                <span className="font-semibold text-green-600">{todayActivity?.verified || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Rejected</span>
-                <span className="font-semibold text-red-600">3</span>
+                <span className="font-semibold text-red-600">{todayActivity?.rejected || 0}</span>
               </div>
             </div>
           </div>
@@ -216,27 +373,21 @@ const DashboardHome: React.FC = () => {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">System Status</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">API Status</span>
-                <span className="flex items-center text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  Online
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Database</span>
-                <span className="flex items-center text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  Healthy
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Mobile Sync</span>
-                <span className="flex items-center text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                  Active
-                </span>
-              </div>
+              <SystemStatusIndicator
+                label="API Status"
+                status={systemStatus.api}
+                icon={<Zap className="w-4 h-4" />}
+              />
+              <SystemStatusIndicator
+                label="Database"
+                status={systemStatus.database}
+                icon={<Database className="w-4 h-4" />}
+              />
+              <SystemStatusIndicator
+                label="Data Sync"
+                status={systemStatus.sync}
+                icon={<Server className="w-4 h-4" />}
+              />
             </div>
           </div>
         </div>
